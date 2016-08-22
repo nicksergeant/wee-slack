@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 #
+# Copyright (C) 2014-1016 Ryan Huber <rhuber@gmail.com>
+# Released under the MIT license.
+#
 
 from functools import wraps
 import time
@@ -23,7 +26,7 @@ try:
 except:
     pass
 
-SCRIPT_NAME = "slack_extension"
+SCRIPT_NAME = "slack"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
 SCRIPT_VERSION = "0.99.9"
 SCRIPT_LICENSE = "MIT"
@@ -253,7 +256,7 @@ class SlackServer(object):
                             self.message_buffer.pop(message_id)
             return True
         else:
-            w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
+            w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack.slack_api_token (token)\"\n\n ")
             self.connected = False
 
     def print_connection_info(self, login_data):
@@ -436,7 +439,7 @@ class Channel(object):
         if channel_buffer != main_weechat_buffer:
             self.channel_buffer = channel_buffer
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.server.nick)
-#            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
+            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
         else:
             self.channel_buffer = None
         channels.update_hashtable()
@@ -562,7 +565,6 @@ class Channel(object):
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name.lstrip("#")})
-                async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": users.find(self.name).identifier})
 
     def close(self, update_remote=True):
         #remove from cache so messages don't reappear when reconnecting
@@ -631,13 +633,13 @@ class Channel(object):
         elif message.find(self.server.nick.encode('utf-8')) > -1:
             tags = ",notify_highlight,log1"
         elif user != self.server.nick and self.name in self.server.users:
-            tags = ",notify_private,notify_message,log1"
+            tags = ",notify_private,notify_message,log1,irc_privmsg"
         elif self.muted:
             tags = ",no_highlight,notify_none,logger_backlog_end"
         elif user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
             tags = ",irc_smart_filter"
         else:
-            tags = ",notify_message,log1"
+            tags = ",notify_message,log1,irc_privmsg"
         #don't write these to local log files
         #tags += ",no_log"
         time_int = int(time_float)
@@ -2210,6 +2212,7 @@ def config_changed_cb(data, option, value):
 
 def quit_notification_cb(signal, sig_type, data):
     stop_talking_to_slack()
+    return w.WEECHAT_RC_OK
 
 def script_unloaded():
     stop_talking_to_slack()
@@ -2336,7 +2339,7 @@ if __name__ == "__main__":
                 # Function name
                 'slack_command_cb', '')
     #        w.hook_command('me', 'me_command_cb', '')
-            w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
+            w.hook_command('me', '', '', '', '', 'me_command_cb', '')
             w.hook_command_run('/query', 'join_command_cb', '')
             w.hook_command_run('/join', 'join_command_cb', '')
             w.hook_command_run('/part', 'part_command_cb', '')
